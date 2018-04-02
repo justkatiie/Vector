@@ -28,15 +28,16 @@ int main(){
         cout << e.what() << endl;
     }
 }
-   /*
+
     //    Test von Max
     Vector y{5,10,8};
+ /*
     auto i = max_element(y.begin(),y.end());
     cout << "Max: " << *i << endl;
     
     
     //    Testen sie Min, Accumulate, count_if, ..., Sort
-    
+  
     //    Test von reserve, ==/!=, ++ postfix/prefix, operator->, insert/erase und range based for
     y.reserve(20);
     i = y.begin();

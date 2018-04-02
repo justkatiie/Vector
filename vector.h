@@ -7,13 +7,10 @@
 #include <initializer_list>
 using namespace std;
 
-const size_t initial_size = 4; //Erste Größe vom Vektor
 
 class Vector{
 public:
-    
-    class Iterator;
-    class Const_Iterator;
+
     using value_type = double;
     using size_type = size_t;
     using difference_type = ptrdiff_t;
@@ -21,15 +18,22 @@ public:
     using const_reference = const double&;
     using pointer = double*;
     using const_pointer = const double*;
-    using iterator = Iterator;
-    using const_iterator = Const_Iterator;
     
 private:
+    static constexpr size_type initial_size {30};
     size_type sz; //index -> wie voll ist das Array
     size_type max_sz; //größe des Arrays
     pointer values; //dyn Array in dem Werte gespeichert sind
     
 public:
+    
+    class Iterator;
+    class Const_Iterator;
+    
+    using iterator = Iterator;
+    using const_iterator = Const_Iterator;
+    
+    
     //Konstruktor ohne Werte, Immer mit 4 Elementen
     Vector():Vector(initial_size){};
     
@@ -57,9 +61,10 @@ public:
     
     //Destruktor
     ~Vector(){delete[] values;}
+
     
     
-    //push_back
+    //push_back - Adds Value at the End
     void push_back(value_type value){
         if(sz == max_sz){
             reserve(sz*2);
@@ -67,7 +72,7 @@ public:
         values[sz++] = value;
     }
     
-    //reserve
+    //reserve - Increases the Size of the array
     void reserve(size_type newsz){
         pointer zwischen = new value_type[newsz];
         
@@ -95,13 +100,13 @@ public:
     
     // [] Operator
     reference operator[](size_type index){
-        if(index < 0 || index >= sz)
+        if(/*index < 0 ||*/ index >= sz)
             throw runtime_error("Out of Bounds");
         return values[index];
     }
     
     const_reference operator[](size_type index)const {
-        if(index < 0 || index >= sz)
+        if(/*index < 0 ||*/ index >= sz)
             throw runtime_error("Out of Bounds");
         return values[index];
     }
@@ -121,7 +126,7 @@ public:
     }
     
     
-    // pop_back()
+    // pop_back() - deletes last element
     void pop_back(){
         if(sz == 0)
             return;
@@ -129,37 +134,71 @@ public:
         
     }
     
-    //size()
+    //returns size()
     size_type size() const {return sz;}
     
     //
     size_type getmaxsz() const {return max_sz;}
     
-    //emtpy()
+    //returns true/false if emtpy()
     bool empty() const {return sz == 0;}
     
-    //clear
+    //clear - clears array
     void clear() {sz = 0;}
     
+    void print(){
+        for (size_type i = 0; i < sz; i++) {
+            cout << "["<< values[i]<< "] ";
+        }
+        //cout << "size():"<<size() << '\n' << "sz:" << sz  << '\n' <<"max_size: "<<max_sz<< endl;
+    }
     
     
-    ;
     
     
-    //////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
     
     
-    iterator begin() { return Iterator(values, *this);}
-    iterator end() {return Iterator(values+sz, *this);}
-    //const_iterator begin() const {return Const_Iterator(values, this);}
-    // const_iterator end() const {return Iterator(values+sz, this);}
+    
+    
+    iterator begin() { return Iterator(values,*this);}
+    iterator end() {return Iterator(values+sz,*this);}
+    const_iterator begin() const {return Const_Iterator(values, this);}
+    const_iterator end() const {return Const_Iterator(values+sz, this);}
+    
+    
+    iterator erase(const_iterator pos) { auto diff = pos-begin();
+        if (diff<0 || static_cast<size_type>(diff)>=sz) throw runtime_error("Iterator out of bounds");
+        size_type current{static_cast<size_type>(diff)}; for (size_type i{current}; i<sz-1; ++i)
+            values[i]=values[i+1]; --sz;
+        return iterator(values+current, *this);
+        
+    }
+    
+    iterator insert(const_iterator pos, const_reference val) {
+        auto diff = pos-begin();
+        if (diff<0 || static_cast<size_type>(diff)>sz)
+            throw runtime_error("Iterator out of bounds");
+        size_type current{static_cast<size_type>(diff)}; if (sz>=max_sz)
+            reserve(max_sz*2); //max_sz*2+10, wenn Ihr Container max_sz==0 erlaubt
+        for (size_t i {sz}; i-->current;) values[i+1]=values[i];
+        values[current]=val;
+        ++sz;
+        return iterator{values+current, *this};
+        
+    }
+    
+    
+    
+    ///////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
+    
     
     
     class Iterator{
-        
-        pointer ptr;
-        const Vector * v;
-        
     public:
         using value_type = double;
         using size_type = size_t;
@@ -168,18 +207,33 @@ public:
         using pointer = double*;
         using iterator_category = std::forward_iterator_tag;
         
+    private:
+        pointer ptr;
+        const Vector * v;
+        
+    public:
+       
+        // Constructor for Iterator
         Iterator(){
-            v = new Vector();
-            ptr = v->values;
+            v = nullptr;
+            ptr = nullptr;
         }
-        Iterator(pointer ptr, Vector &v){
+        
+        // Constructor for Iterator with Value(in this Case pointer and vector)
+        Iterator(pointer ptr, Vector  &v){
             this -> ptr = ptr;
             this -> v = &v;
         };
         
+        //Destructer for Iterator
         ~Iterator() {}
         
-        Iterator& operator++(){
+        
+        operator Const_Iterator(){ return const_iterator(ptr, v);}
+
+        
+        // Overwrites ++ operator --> prefix a++
+        Iterator operator++(){
             if(this->ptr >= v->values+v->sz){
                 throw runtime_error ("[Fehlermeldung]");
             } else {
@@ -187,18 +241,19 @@ public:
                 return *this;
             }
             
-            
+        }
+    
+       
+      /*  bool operator!=(iterator &rop){        // rop -> rechter operand, "this" immer der linke Operand
+            if(ptr == rop.ptr)return false;
+                else return true;
         }
         
-        /*   bool operator!=(const_iterator rop){        // rop -> rechter operand, "this" immer der linke Operand
-         if(*this == rop){
-         return false;
-         }
-         else{
-         return true;
-         }
-         }
-         */
+        bool operator==(iterator& rop){
+            if(ptr==rop.ptr) return true;
+            return false;
+        }*/
+        
         
         double& operator*(){
             if(this->ptr >= v->values+v->sz || this->ptr < v->values){
@@ -211,20 +266,17 @@ public:
         }
         
         
-       operator Const_Iterator(){ return Vector::Const_Iterator(ptr, &v);}
-        
-        
+       
         
     };
     
     
-    ///////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
     
     
     class Const_Iterator{
-        pointer ptr;
-        const Vector * v;
-        
     public:
         using value_type = double;
         using size_type = size_t;
@@ -232,15 +284,20 @@ public:
         using reference = double&;
         using pointer = double*;
         using iterator_category = std::forward_iterator_tag;
+    
+    private:
+        pointer ptr;
+        const Vector * v;
         
+    public:
         Const_Iterator(){
-            v = new Vector();
-            ptr = v->values;
+            v = nullptr;
+            ptr = nullptr;
         }
         
-        Const_Iterator(pointer ptr, Vector &vec){
-            ptr = ptr;
-            v = &vec;
+        Const_Iterator(pointer ptr, const Vector *v){
+            this->v = v;
+            this-> ptr = ptr;
         };
         
         ~Const_Iterator() {}
@@ -276,42 +333,43 @@ public:
         }
         
         
+        ///////////////////////////////////////////////////////////////////////////////////
         
         
-        friend difference_type operator-(const Const_Iterator& lep, const Const_Iterator& rop){
-            return lep.ptr-rop.ptr;
+        friend difference_type operator-(const Const_Iterator& lop, const Const_Iterator& rop){
+            return lop.ptr-rop.ptr;
         }
         
-        /* friend difference_type operator-(const Const_Iterator& lep, size_type rop){
-         return lep.ptr-rop;
-         }*/
+        friend const_iterator operator-(const Const_Iterator& lop, size_type rop){
+         return const_iterator(lop.ptr-rop,lop.v);
+         }
         
-        friend difference_type operator!=(const Const_Iterator& lep, const Const_Iterator& rop){
-            return lep.ptr!=rop.ptr;
+        friend difference_type operator!=(const Const_Iterator& lop, const Const_Iterator& rop){
+            return lop.ptr!=rop.ptr;
         }
         
-        friend difference_type operator==(const Const_Iterator& lep, const Const_Iterator& rop){
-            return lep.ptr==rop.ptr;
+        friend difference_type operator==(const Const_Iterator& lop, const Const_Iterator& rop){
+            return lop.ptr==rop.ptr;
         }
         
-        /* friend difference_type operator+(const Const_Iterator& lep, const Const_Iterator& rop){
-         return lep.ptr+rop.ptr;
-         }*/
+        friend const_iterator operator+(const Const_Iterator& lop, size_type rop){
+         return const_iterator(lop.ptr+rop, lop.v);
+         }
         
-        friend difference_type operator<(const Const_Iterator& lep, const Const_Iterator& rop){
-            return lep.ptr<rop.ptr;
+        friend difference_type operator<(const Const_Iterator& lop, const Const_Iterator& rop){
+            return lop.ptr<rop.ptr;
         }
         
-        friend difference_type operator>(const Const_Iterator& lep, const Const_Iterator& rop){
-            return lep.ptr>rop.ptr;
+        friend difference_type operator>(const Const_Iterator& lop, const Const_Iterator& rop){
+            return lop.ptr>rop.ptr;
         }
         
-        friend difference_type operator<=(const Const_Iterator& lep, const Const_Iterator& rop){
-            return lep.ptr<=rop.ptr;
+        friend difference_type operator<=(const Const_Iterator& lop, const Const_Iterator& rop){
+            return lop.ptr<=rop.ptr;
         }
         
-        friend difference_type operator>=(const Const_Iterator& lep, const Const_Iterator& rop){
-            return lep.ptr>=rop.ptr;
+        friend difference_type operator>=(const Const_Iterator& lop, const Const_Iterator& rop){
+            return lop.ptr>=rop.ptr;
         }
         
     };
